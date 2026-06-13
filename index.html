@@ -1,316 +1,503 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#000000" />
-  <title>QR Scanner PWA</title>
-  <style>
-    * { box-sizing:border-box; margin:0; padding:0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0a5c36">
+<title>PM Machine</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#0a5c36;--green2:#1a8a52;--green-light:#e8f5ee;
+  --text:#1a1a1a;--muted:#666;--border:#e0e0e0;--bg:#f4f6f4;--card:#fff;
+  --r:12px;--rs:8px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:3rem}
+.header{background:var(--green);color:#fff;padding:1rem 1.25rem 1.1rem;position:sticky;top:0;z-index:100}
+.hrow{display:flex;align-items:center;gap:10px}
+.hicon{width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.header h1{font-size:17px;font-weight:600}
+.header p{font-size:12px;opacity:.75;margin-top:2px}
+.dots{display:flex;gap:6px;margin-top:12px}
+.dot{height:4px;border-radius:2px;flex:1;background:rgba(255,255,255,.3);transition:background .3s}
+.dot.active{background:#fff}
+.dot.done{background:rgba(255,255,255,.65)}
+.page{display:none;padding:1rem}
+.page.active{display:block}
+.stitle{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:1.25rem 0 .6rem}
+.stitle:first-child{margin-top:0}
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);overflow:hidden}
+.field{display:flex;align-items:center;padding:12px 14px;gap:12px;border-bottom:1px solid var(--border)}
+.field:last-child{border-bottom:none}
+.fi{font-size:18px;flex-shrink:0;width:22px;text-align:center}
+.fl{font-size:13px;color:var(--muted);min-width:85px;flex-shrink:0}
+.field input,.field select{flex:1;border:none;outline:none;font-size:14px;color:var(--text);background:transparent;font-family:inherit}
 
-    body {
-      font-family:'Sarabun', 'Prompt', Arial, sans-serif;
-      background:#0f172a;
-      color:#f1f5f9;
-      height:100dvh;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      overflow:hidden;
-      user-select:none;
-    }
+/* QR */
+.qr-btn{width:100%;padding:1.4rem;background:var(--card);border:2px dashed var(--border);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:all .2s}
+.qr-btn:hover,.qr-btn.scanned{border-style:solid;border-color:var(--green);background:var(--green-light)}
+.qr-ico{font-size:38px}
+.qr-txt{font-size:14px;color:var(--muted);font-weight:500}
+.qr-sub{font-size:12px;color:var(--muted)}
+.mbadge{display:inline-flex;align-items:center;gap:5px;background:var(--green);color:#fff;font-size:13px;font-weight:600;padding:3px 12px;border-radius:20px;margin-top:2px}
 
-    h2 {
-      font-size:17px;
-      font-weight:700;
-      color:#f1f5f9;
-      margin-bottom:16px;
-      letter-spacing:0.3px;
-    }
+/* Search modal */
+.search-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-end}
+.search-modal.open{display:flex}
+.search-sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;max-height:80vh;display:flex;flex-direction:column}
+.search-header{padding:1rem 1rem .5rem;border-bottom:1px solid var(--border)}
+.search-header h3{font-size:15px;font-weight:600;margin-bottom:.6rem}
+.search-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--rs);font-size:14px;outline:none;font-family:inherit}
+.search-input:focus{border-color:var(--green)}
+.search-list{overflow-y:auto;flex:1}
+.search-item{padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.search-item:hover{background:var(--green-light)}
+.search-item:last-child{border-bottom:none}
+.si-name{font-size:14px;font-weight:500}
+.si-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.search-close{width:100%;padding:12px;background:#f5f5f5;border:none;font-size:14px;color:var(--muted);cursor:pointer;border-top:1px solid var(--border)}
 
-    #app {
-      width:100%;
-      max-width:420px;
-      padding:20px 16px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-    }
+/* Photos */
+.photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.photo-slot{border:2px dashed var(--border);border-radius:var(--rs);aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;position:relative;overflow:hidden;transition:all .2s;background:var(--card)}
+.photo-slot:hover{border-color:var(--green);background:var(--green-light)}
+.photo-slot.has-img{border-style:solid;border-color:var(--green)}
+.photo-slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pbadge{position:absolute;top:6px;left:6px;z-index:1;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px}
+.pb-b{background:#fff3e0;color:#e65100}
+.pb-a{background:#e8f5e9;color:#1b5e20}
+.pico{font-size:26px;color:var(--muted)}
+.plbl{font-size:12px;color:var(--muted)}
+input[type=file]{display:none}
 
-    /* VIDEO WRAP */
-    #video-wrap {
-      position:relative;
-      width:100%;
-      aspect-ratio:1;
-      background:#020617;
-      border-radius:20px;
-      overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      box-shadow:0 8px 32px rgba(0,0,0,0.5);
-    }
+/* Status */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px}
+.sopt{padding:12px 8px;border:1.5px solid var(--border);border-radius:var(--rs);text-align:center;cursor:pointer;transition:all .2s;font-size:14px;font-weight:500}
+.sopt.pass.sel{background:#e8f5e9;border-color:#4caf50;color:#1b5e20}
+.sopt.fail.sel{background:#ffebee;border-color:#f44336;color:#b71c1c}
 
-    #qr-video {
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:none;
-    }
+/* Nav */
+.nav{display:flex;gap:10px;margin-top:1.25rem}
+.btn-back{padding:13px 20px;border:1.5px solid var(--border);border-radius:var(--r);background:#fff;color:var(--muted);font-size:15px;font-weight:500;cursor:pointer}
+.btn-next{flex:1;padding:13px;background:var(--green);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer}
+.btn-next:hover{background:var(--green2)}
 
-    #placeholder {
-      text-align:center;
-      color:rgba(255,255,255,0.35);
-      font-size:13px;
-    }
+/* Summary */
+.srow{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:14px}
+.srow:last-child{border-bottom:none}
+.sk{color:var(--muted)}
+.sv{font-weight:500;text-align:right;max-width:60%}
+.prow{display:flex;gap:8px;padding:10px 14px}
+.thumb{width:60px;height:60px;border-radius:8px;object-fit:cover;border:1px solid var(--border)}
+.thumb-e{width:60px;height:60px;border-radius:8px;background:var(--bg);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:20px}
 
-    #placeholder .icon { font-size:52px; display:block; margin-bottom:10px; }
+/* Loading / Success */
+.loading{display:none;flex-direction:column;align-items:center;gap:12px;padding:2rem}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.success-box{display:none;flex-direction:column;align-items:center;gap:10px;padding:2rem;text-align:center}
+.sico{font-size:52px}
+.stit{font-size:20px;font-weight:700;color:var(--green)}
+.ssub{font-size:14px;color:var(--muted)}
+.btn-new{margin-top:1rem;padding:13px 32px;background:var(--green);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer}
 
-    /* CORNERS */
-    .corner {
-      position:absolute;
-      width:32px;
-      height:32px;
-      border-color:#f59e0b;
-      border-style:solid;
-      pointer-events:none;
-      z-index:10;
-    }
-    .corner.tl { top:12px; left:12px; border-width:3px 0 0 3px; border-radius:5px 0 0 0; }
-    .corner.tr { top:12px; right:12px; border-width:3px 3px 0 0; border-radius:0 5px 0 0; }
-    .corner.bl { bottom:12px; left:12px; border-width:0 0 3px 3px; border-radius:0 0 0 5px; }
-    .corner.br { bottom:12px; right:12px; border-width:0 3px 3px 0; border-radius:0 0 5px 0; }
+/* Submit */
+.btn-sub{width:100%;padding:14px;background:var(--green);color:#fff;border:none;border-radius:var(--r);font-size:15px;font-weight:600;cursor:pointer;margin-top:1.25rem}
 
-    /* SCAN LINE */
-    #scanline {
-      display:none;
-      position:absolute;
-      left:12px; right:12px;
-      height:2px;
-      background:linear-gradient(90deg, transparent, #f59e0b, transparent);
-      border-radius:2px;
-      animation:sweep 2s ease-in-out infinite;
-      z-index:10;
-    }
-    @keyframes sweep { 0%,100%{ top:14%; } 50%{ top:82%; } }
+/* QR Camera modal */
+.qr-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;flex-direction:column;align-items:center;justify-content:center}
+.qr-modal.open{display:flex}
+.qr-frame{position:relative;width:280px;height:280px}
+.qr-frame video{width:100%;height:100%;border-radius:12px;object-fit:cover}
+.corners{position:absolute;inset:0;pointer-events:none}
+.c{position:absolute;width:24px;height:24px;border-color:#00e5ff;border-style:solid}
+.c.tl{top:8px;left:8px;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
+.c.tr{top:8px;right:8px;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
+.c.bl{bottom:8px;left:8px;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
+.c.br{bottom:8px;right:8px;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
+.scanline{position:absolute;left:8px;right:8px;height:2px;background:#00e5ff;animation:scan 2s linear infinite}
+@keyframes scan{0%{top:8px}100%{top:calc(100% - 10px)}}
+.qr-lbl{color:#fff;font-size:14px;margin-top:14px}
+.qr-close{margin-top:18px;padding:9px 28px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:20px;font-size:14px;cursor:pointer}
 
-    canvas { display:none; }
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:24px;font-size:14px;font-weight:500;color:#fff;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:999}
+.toast.success{background:#1b5e20}
+.toast.error{background:#b71c1c}
+.toast.show{opacity:1}
 
-    /* STATUS */
-    #status {
-      margin-top:14px;
-      font-size:14px;
-      color:#94a3b8;
-      text-align:center;
-      min-height:20px;
-      line-height:1.5;
-    }
-
-    /* RESULT */
-    #result-badge {
-      display:none;
-      margin-top:12px;
-      background:#dcfce7;
-      color:#15803d;
-      border-radius:14px;
-      padding:12px 20px;
-      font-size:15px;
-      font-weight:700;
-      text-align:center;
-      width:100%;
-      animation:popIn 0.25s ease;
-    }
-    @keyframes popIn { from{transform:scale(0.85);opacity:0} to{transform:scale(1);opacity:1} }
-
-    /* BUTTONS */
-    .btn {
-      margin-top:12px;
-      width:100%;
-      padding:14px;
-      border:none;
-      border-radius:14px;
-      font-family:'Sarabun',Arial,sans-serif;
-      font-size:15px;
-      font-weight:700;
-      cursor:pointer;
-      transition:transform 0.15s, opacity 0.15s;
-    }
-    .btn:active { transform:scale(0.97); }
-
-    .btn-primary {
-      background:linear-gradient(135deg,#2563eb,#1d4ed8);
-      color:#fff;
-      box-shadow:0 4px 14px rgba(37,99,235,0.4);
-    }
-
-    .btn-secondary {
-      background:#1e293b;
-      color:#94a3b8;
-    }
-
-    /* ERROR GUIDE */
-    #error-guide {
-      display:none;
-      margin-top:14px;
-      background:#1e293b;
-      border:1.5px solid #f59e0b;
-      border-radius:16px;
-      padding:14px 16px;
-      width:100%;
-      font-size:13px;
-      color:#fde68a;
-      line-height:2;
-    }
-    #error-guide .title {
-      font-size:14px;
-      font-weight:700;
-      color:#f59e0b;
-      margin-bottom:8px;
-    }
-  </style>
+/* OR divider */
+.or{display:flex;align-items:center;gap:10px;margin:.75rem 0;color:var(--muted);font-size:12px}
+.or::before,.or::after{content:'';flex:1;height:1px;background:var(--border)}
+</style>
 </head>
 <body>
-<div id="app">
-  <h2>📷 สแกน QR ทะเบียนเครื่อง</h2>
 
-  <div id="video-wrap">
-    <div id="placeholder">
-      <span class="icon">📷</span>
-      กดปุ่มด้านล่างเพื่อเปิดกล้อง
+<div class="header">
+  <div class="hrow">
+    <div class="hicon">🔧</div>
+    <div>
+      <h1>PM Machine</h1>
+      <p id="step-lbl">ขั้นตอน 1 / 3 — ข้อมูลทั่วไป</p>
     </div>
-    <video id="qr-video" autoplay playsinline muted></video>
-    <canvas id="qr-canvas"></canvas>
-    <div class="corner tl"></div>
-    <div class="corner tr"></div>
-    <div class="corner bl"></div>
-    <div class="corner br"></div>
-    <div id="scanline"></div>
   </div>
-
-  <div id="status">กดปุ่มเปิดกล้องแล้วชี้ไปที่ QR Code</div>
-  <div id="result-badge"></div>
-
-  <!-- Error guide -->
-  <div id="error-guide">
-    <div class="title">🔒 Chrome บล็อกกล้อง — วิธีแก้:</div>
-    <div>① กดไอคอน 🔒 ที่แถบ URL ด้านบน</div>
-    <div>② เลือก <b>Site settings / การตั้งค่าไซต์</b></div>
-    <div>③ หา <b>Camera</b> → เปลี่ยนเป็น <b>Allow ✅</b></div>
-    <div>④ Reload หน้าแล้วลองใหม่</div>
+  <div class="dots">
+    <div class="dot active" id="d0"></div>
+    <div class="dot" id="d1"></div>
+    <div class="dot" id="d2"></div>
   </div>
-
-  <button class="btn btn-primary" id="btn-start" onclick="startCamera()">📷 เปิดกล้อง</button>
-  <button class="btn btn-secondary" onclick="closeWindow()">✕ ปิดหน้าต่าง</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<!-- PAGE 0 -->
+<div class="page active" id="p0">
+  <div class="stitle">ข้อมูลทั่วไป</div>
+  <div class="card">
+    <div class="field">
+      <span class="fi">📅</span><span class="fl">วันที่</span>
+      <input type="date" id="f-date">
+    </div>
+    <div class="field">
+      <span class="fi">👤</span><span class="fl">ช่างเทคนิค</span>
+      <input type="text" id="f-tech" placeholder="ชื่อ-นามสกุล">
+    </div>
+  </div>
+
+  <div class="stitle">เครื่องจักร</div>
+  <button class="qr-btn" id="qr-btn" onclick="openQR()">
+    <div class="qr-ico">📷</div>
+    <div class="qr-txt">แตะเพื่อสแกน QR Code</div>
+    <div class="qr-sub">ชี้กล้องไปที่ QR Code บนเครื่องจักร</div>
+  </button>
+
+  <div class="or">หรือ</div>
+
+  <button class="qr-btn" onclick="openSearch()" style="border-style:solid">
+    <div class="qr-ico">🔍</div>
+    <div class="qr-txt">ค้นหาเครื่องจักรจากรายการ</div>
+    <div class="qr-sub" id="machine-count">กำลังโหลดรายการ...</div>
+  </button>
+
+  <div id="machine-info" style="display:none;margin-top:10px">
+    <div class="card">
+      <div class="field"><span class="fi">🏭</span><span class="fl">เครื่องจักร</span><span id="m-name" style="font-size:14px;font-weight:500;flex:1"></span></div>
+      <div class="field"><span class="fi">🏷️</span><span class="fl">ทะเบียน</span><span class="mbadge" id="m-reg">—</span></div>
+      <div class="field"><span class="fi">📍</span><span class="fl">แผนก</span><span id="m-dept" style="font-size:14px;flex:1"></span></div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="btn-next" onclick="goPage(1)">ถัดไป — อัพโหลดรูปภาพ →</button>
+  </div>
+</div>
+
+<!-- PAGE 1 -->
+<div class="page" id="p1">
+  <div class="stitle">รูปภาพ</div>
+  <div class="photo-grid">
+    <div class="photo-slot" id="slot-b" onclick="document.getElementById('fb').click()">
+      <span class="pbadge pb-b">ก่อน PM</span>
+      <div class="pico">📷</div><div class="plbl">ถ่าย/อัพโหลด</div>
+    </div>
+    <div class="photo-slot" id="slot-a" onclick="document.getElementById('fa').click()">
+      <span class="pbadge pb-a">หลัง PM</span>
+      <div class="pico">📷</div><div class="plbl">ถ่าย/อัพโหลด</div>
+    </div>
+  </div>
+  <input type="file" id="fb" accept="image/*" capture="environment" onchange="loadPhoto(this,'slot-b','before')">
+  <input type="file" id="fa" accept="image/*" capture="environment" onchange="loadPhoto(this,'slot-a','after')">
+
+  <div class="stitle">ผลการตรวจสอบ</div>
+  <div class="card">
+    <div class="sgrid">
+      <div class="sopt pass" id="s-pass" onclick="setSt('ผ่าน')">✅ ผ่าน</div>
+      <div class="sopt fail" id="s-fail" onclick="setSt('ไม่ผ่าน')">❌ ไม่ผ่าน</div>
+    </div>
+  </div>
+
+  <div class="stitle">หมายเหตุ</div>
+  <div class="card">
+    <div class="field"><span class="fi">📝</span><input type="text" id="f-rem" placeholder="บันทึกเพิ่มเติม (ถ้ามี)"></div>
+  </div>
+
+  <div class="nav">
+    <button class="btn-back" onclick="goPage(0)">← ย้อนกลับ</button>
+    <button class="btn-next" onclick="goPage(2)">ถัดไป — ตรวจสอบ →</button>
+  </div>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page" id="p2">
+  <div class="stitle">ตรวจสอบก่อนบันทึก</div>
+  <div class="card" id="sum-card"></div>
+
+  <div class="stitle">รูปภาพ</div>
+  <div class="card"><div class="prow" id="photo-prev"></div></div>
+
+  <div class="loading" id="load-box">
+    <div class="spinner"></div>
+    <div style="font-size:14px;color:#666">กำลังบันทึกและอัพโหลดรูป...</div>
+  </div>
+  <div class="success-box" id="succ-box">
+    <div class="sico">✅</div>
+    <div class="stit">บันทึกสำเร็จ!</div>
+    <div class="ssub">ข้อมูลถูกบันทึกลง Google Sheets แล้ว</div>
+    <button class="btn-new" onclick="location.reload()">+ บันทึก PM ใหม่</button>
+  </div>
+  <div id="sub-sec">
+    <div class="nav">
+      <button class="btn-back" onclick="goPage(1)">← ย้อนกลับ</button>
+      <button class="btn-next" onclick="submitData()">💾 บันทึกลง Sheets</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR Camera Modal -->
+<div class="qr-modal" id="qr-modal">
+  <div class="qr-frame">
+    <video id="qr-video" autoplay playsinline muted></video>
+    <div class="corners">
+      <div class="c tl"></div><div class="c tr"></div>
+      <div class="c bl"></div><div class="c br"></div>
+      <div class="scanline"></div>
+    </div>
+  </div>
+  <div class="qr-lbl">ชี้กล้องไปที่ QR Code เครื่องจักร</div>
+  <button class="qr-close" onclick="closeQR()">✕ ปิด</button>
+</div>
+
+<!-- Search Modal -->
+<div class="search-modal" id="search-modal">
+  <div class="search-sheet">
+    <div class="search-header">
+      <h3>🔍 ค้นหาเครื่องจักร</h3>
+      <input class="search-input" id="search-inp" placeholder="พิมพ์ชื่อหรือทะเบียน..." oninput="filterList()">
+    </div>
+    <div class="search-list" id="search-list"></div>
+    <button class="search-close" onclick="closeSearch()">✕ ปิด</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
-  var stream = null;
-  var animFrame = null;
-  var found = false;
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-QYJhXo2b_6QzC9Q04qUo_XJnWfAazcQdDDUKQn9LN9RV6y50OwdHskZQoKPoc-Q6PA/exec';
 
-  // --- รับ origin ของ opener เพื่อใช้ postMessage ---
-  // Google Apps Script มี origin แบบ https://script.google.com
-  // แต่อาจ embed ใน iframe จึงส่ง * ไปก่อน แล้วกรองฝั่ง GAS เอง
-  var TARGET_ORIGIN = "*";
+let st = {
+  date:'',tech:'',machineName:'',machineReg:'',machineDept:'',
+  status:'',remark:'',
+  photoBefore:null,photoBeforeName:'',photoBeforeURL:'',
+  photoAfter:null,photoAfterName:'',photoAfterURL:''
+};
+let curPage = 0;
+let machines = [];
+let scanInterval = null;
+let videoStream = null;
 
-  function setStatus(msg) {
-    document.getElementById("status").textContent = msg;
+// Init
+document.getElementById('f-date').valueAsDate = new Date();
+loadMachines();
+
+async function loadMachines() {
+  try {
+    const res = await fetch(SCRIPT_URL);
+    const data = await res.json();
+    machines = data.machines || [];
+    document.getElementById('machine-count').textContent = `${machines.length} เครื่องในระบบ`;
+  } catch(e) {
+    document.getElementById('machine-count').textContent = 'โหลดรายการไม่ได้ — ใช้ QR แทน';
   }
+}
 
-  function startCamera() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setStatus("⚠️ เบราว์เซอร์ไม่รองรับ Camera API (ต้องใช้ HTTPS)");
-      return;
-    }
-    document.getElementById("btn-start").disabled = true;
-    document.getElementById("error-guide").style.display = "none";
-    setStatus("กำลังขอสิทธิ์กล้อง...");
+// Pages
+function goPage(n) {
+  if (n === 1) {
+    st.date = document.getElementById('f-date').value;
+    st.tech = document.getElementById('f-tech').value.trim();
+    if (!st.date) { toast('กรุณาเลือกวันที่','error'); return; }
+    if (!st.tech) { toast('กรุณากรอกชื่อช่างเทคนิค','error'); return; }
+    if (!st.machineReg) { toast('กรุณาสแกน QR หรือเลือกเครื่องจักรก่อน','error'); return; }
+  }
+  if (n === 2) {
+    if (!st.status) { toast('กรุณาเลือกผลการตรวจสอบ','error'); return; }
+    st.remark = document.getElementById('f-rem').value;
+    buildSummary();
+  }
+  document.getElementById('p'+curPage).classList.remove('active');
+  curPage = n;
+  document.getElementById('p'+n).classList.add('active');
+  updateDots();
+  window.scrollTo(0,0);
+}
 
-    navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
-    }).then(function(s) {
-      stream = s;
-      var vid = document.getElementById("qr-video");
-      vid.srcObject = stream;
-      vid.style.display = "block";
-      document.getElementById("placeholder").style.display = "none";
-      document.getElementById("scanline").style.display = "block";
-      setStatus("ชี้กล้องไปที่ QR Code ของเครื่องจักร...");
-      vid.addEventListener("loadedmetadata", scanLoop);
-    }).catch(function(e) {
-      document.getElementById("btn-start").disabled = false;
-      if (e.name === "NotAllowedError" || e.name === "PermissionDeniedError") {
-        document.getElementById("placeholder").innerHTML = '<span class="icon">🚫</span>ถูกบล็อกการใช้กล้อง';
-        document.getElementById("error-guide").style.display = "block";
-        setStatus("");
-      } else if (e.name === "NotFoundError") {
-        setStatus("⚠️ ไม่พบกล้องในอุปกรณ์นี้");
-      } else if (e.name === "NotReadableError") {
-        setStatus("⚠️ กล้องถูกใช้งานโดยแอปอื่นอยู่");
-      } else {
-        setStatus("⚠️ เปิดกล้องไม่ได้: " + e.message);
-      }
+function updateDots() {
+  const lbls = ['ขั้นตอน 1 / 3 — ข้อมูลทั่วไป','ขั้นตอน 2 / 3 — รูปภาพและผล','ขั้นตอน 3 / 3 — ตรวจสอบและบันทึก'];
+  document.getElementById('step-lbl').textContent = lbls[curPage];
+  for (let i=0;i<3;i++) {
+    document.getElementById('d'+i).className = 'dot'+(i===curPage?' active':i<curPage?' done':'');
+  }
+}
+
+// QR Camera
+function openQR() {
+  document.getElementById('qr-modal').classList.add('open');
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}})
+    .then(stream => {
+      videoStream = stream;
+      const v = document.getElementById('qr-video');
+      v.srcObject = stream; v.play();
+      scanInterval = setInterval(scanFrame, 200);
+    })
+    .catch(() => toast('ไม่สามารถเปิดกล้องได้','error'));
+}
+function scanFrame() {
+  const v = document.getElementById('qr-video');
+  if (v.readyState !== v.HAVE_ENOUGH_DATA) return;
+  const c = document.createElement('canvas');
+  c.width = v.videoWidth; c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  const img = c.getContext('2d').getImageData(0,0,c.width,c.height);
+  const code = jsQR(img.data,img.width,img.height);
+  if (code) { handleQR(code.data); closeQR(); }
+}
+function closeQR() {
+  clearInterval(scanInterval);
+  if (videoStream) videoStream.getTracks().forEach(t=>t.stop());
+  document.getElementById('qr-modal').classList.remove('open');
+}
+function handleQR(data) {
+  let reg=data, name=data, dept='';
+  try {
+    const obj = JSON.parse(data);
+    reg = obj.reg||obj.ทะเบียน||data;
+    name = obj.name||obj.เครื่องจักร||data;
+    dept = obj.dept||obj.แผนก||'';
+  } catch(e) {}
+  // ลองหาจากรายการ
+  const found = machines.find(m => m.reg === reg);
+  if (found) { name=found.name; dept=found.dept; }
+  setMachine(name, reg, dept);
+  toast('สแกน QR สำเร็จ: '+reg,'success');
+}
+
+// Search
+function openSearch() {
+  filterList();
+  document.getElementById('search-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('search-inp').focus(),100);
+}
+function closeSearch() {
+  document.getElementById('search-modal').classList.remove('open');
+}
+function filterList() {
+  const q = document.getElementById('search-inp').value.toLowerCase();
+  const filtered = machines.filter(m =>
+    m.name.toLowerCase().includes(q) || m.reg.toLowerCase().includes(q)
+  );
+  document.getElementById('search-list').innerHTML = filtered.length
+    ? filtered.map(m=>`
+      <div class="search-item" onclick="pickMachine('${escHtml(m.name)}','${escHtml(m.reg)}','${escHtml(m.dept)}')">
+        <div class="si-name">${m.name}</div>
+        <div class="si-sub">${m.reg} · ${m.dept}</div>
+      </div>`).join('')
+    : '<div style="padding:2rem;text-align:center;color:#999;font-size:14px">ไม่พบเครื่องจักร</div>';
+}
+function escHtml(s){ return (s||'').replace(/'/g,"\\'"); }
+function pickMachine(name,reg,dept) {
+  setMachine(name,reg,dept);
+  closeSearch();
+  toast('เลือก: '+reg,'success');
+}
+function setMachine(name,reg,dept) {
+  st.machineName=name; st.machineReg=reg; st.machineDept=dept;
+  document.getElementById('m-name').textContent=name;
+  document.getElementById('m-reg').textContent=reg;
+  document.getElementById('m-dept').textContent=dept;
+  document.getElementById('machine-info').style.display='block';
+  const btn=document.getElementById('qr-btn');
+  btn.classList.add('scanned');
+  btn.querySelector('.qr-ico').textContent='✅';
+  btn.querySelector('.qr-txt').textContent='สแกนสำเร็จ — แตะเพื่อสแกนใหม่';
+  btn.querySelector('.qr-sub').textContent=reg;
+}
+
+// Photos
+function loadPhoto(input,slotId,type) {
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const slot=document.getElementById(slotId);
+    slot.classList.add('has-img');
+    let img=slot.querySelector('img');
+    if(!img){img=document.createElement('img');slot.appendChild(img);}
+    img.src=e.target.result;
+    const ico=slot.querySelector('.pico'); if(ico) ico.style.display='none';
+    const lbl=slot.querySelector('.plbl'); if(lbl) lbl.style.display='none';
+    const b64=e.target.result.split(',')[1];
+    if(type==='before'){st.photoBefore=b64;st.photoBeforeName=file.name;st.photoBeforeURL=e.target.result;}
+    else{st.photoAfter=b64;st.photoAfterName=file.name;st.photoAfterURL=e.target.result;}
+    toast('อัพโหลดรูป'+(type==='before'?'ก่อน':'หลัก')+' PM แล้ว','success');
+  };
+  reader.readAsDataURL(file);
+}
+
+// Status
+function setSt(val) {
+  st.status=val;
+  document.getElementById('s-pass').classList.toggle('sel',val==='ผ่าน');
+  document.getElementById('s-fail').classList.toggle('sel',val==='ไม่ผ่าน');
+}
+
+// Summary
+function buildSummary() {
+  const rows=[
+    ['📅 วันที่',st.date],['👤 ช่างเทคนิค',st.tech],
+    ['🏭 เครื่องจักร',st.machineName],['🏷️ ทะเบียน',st.machineReg],
+    ['📍 แผนก',st.machineDept||'—'],['📋 ผลการตรวจ',st.status],
+    ['📝 หมายเหตุ',st.remark||'—']
+  ];
+  document.getElementById('sum-card').innerHTML=rows.map(([k,v])=>
+    `<div class="srow"><span class="sk">${k}</span><span class="sv">${v}</span></div>`).join('');
+  const pr=document.getElementById('photo-prev');
+  pr.innerHTML='';
+  [{url:st.photoBeforeURL,lbl:'ก่อน PM'},{url:st.photoAfterURL,lbl:'หลัง PM'}].forEach(({url,lbl})=>{
+    pr.innerHTML+=url
+      ?`<div style="text-align:center"><img class="thumb" src="${url}"><div style="font-size:11px;color:#666;margin-top:3px">${lbl}</div></div>`
+      :`<div style="text-align:center"><div class="thumb-e">📷</div><div style="font-size:11px;color:#aaa;margin-top:3px">${lbl}</div></div>`;
+  });
+}
+
+// Submit
+async function submitData() {
+  document.getElementById('sub-sec').style.display='none';
+  document.getElementById('load-box').style.display='flex';
+  try {
+    const res=await fetch(SCRIPT_URL,{
+      method:'POST',
+      body:JSON.stringify({
+        date:st.date, machineName:st.machineName, machineReg:st.machineReg,
+        technician:st.tech, status:st.status, remark:st.remark,
+        photoBefore:st.photoBefore||'', photoBeforeName:st.photoBeforeName||'before.jpg',
+        photoAfter:st.photoAfter||'', photoAfterName:st.photoAfterName||'after.jpg'
+      })
     });
+    const json=await res.json();
+    document.getElementById('load-box').style.display='none';
+    if(json.success) document.getElementById('succ-box').style.display='flex';
+    else throw new Error(json.error||'error');
+  } catch(err) {
+    document.getElementById('load-box').style.display='none';
+    document.getElementById('sub-sec').style.display='block';
+    toast('เกิดข้อผิดพลาด: '+err.message,'error');
   }
+}
 
-  function scanLoop() {
-    var vid    = document.getElementById("qr-video");
-    var canvas = document.getElementById("qr-canvas");
-    var ctx    = canvas.getContext("2d");
-
-    function loop() {
-      if (!stream || found) return;
-      if (vid.readyState === vid.HAVE_ENOUGH_DATA) {
-        canvas.width  = vid.videoWidth;
-        canvas.height = vid.videoHeight;
-        ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
-        var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        var code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
-        if (code && code.data) {
-          found = true;
-          onFound(code.data);
-          return;
-        }
-      }
-      animFrame = requestAnimationFrame(loop);
-    }
-    animFrame = requestAnimationFrame(loop);
-  }
-
-  function onFound(raw) {
-    // ดึง field แรก (ทะเบียนเครื่อง) กรณี QR มีหลาย field คั่นด้วย | , : tab newline
-    var machineNo = raw.split(/[|,:\t\n]/)[0].trim();
-
-    // หยุดกล้อง
-    stopCamera();
-    document.getElementById("scanline").style.display = "none";
-
-    // แสดงผล
-    setStatus("✅ พบ QR Code!");
-    var badge = document.getElementById("result-badge");
-    badge.textContent = "🔩 ทะเบียนเครื่อง: " + machineNo;
-    badge.style.display = "block";
-
-    // ส่งค่ากลับหน้าแม่ (GAS) ผ่าน postMessage
-    if (window.opener && !window.opener.closed) {
-      window.opener.postMessage({ machineNo: machineNo }, TARGET_ORIGIN);
-    }
-
-    // ปิดหน้าต่างนี้หลัง 1.2 วินาที
-    setTimeout(function() { window.close(); }, 1200);
-  }
-
-  function stopCamera() {
-    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
-    if (stream)    { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
-  }
-
-  function closeWindow() {
-    stopCamera();
-    window.close();
-  }
+// Toast
+function toast(msg,type='success') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
 </script>
 </body>
 </html>
