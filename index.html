@@ -4,169 +4,166 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#000000" />
-  <title>QR Scanner PWA</title>
+  <title>QR Scanner</title>
   <style>
-    * { box-sizing:border-box; margin:0; padding:0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family:'Sarabun', 'Prompt', Arial, sans-serif;
-      background:#0f172a;
-      color:#f1f5f9;
-      height:100dvh;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      overflow:hidden;
-      user-select:none;
+      font-family: 'Sarabun', 'Prompt', Arial, sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      user-select: none;
     }
 
     h2 {
-      font-size:17px;
-      font-weight:700;
-      color:#f1f5f9;
-      margin-bottom:16px;
-      letter-spacing:0.3px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 14px;
+      letter-spacing: 0.3px;
     }
 
     #app {
-      width:100%;
-      max-width:420px;
-      padding:20px 16px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
+      width: 100%;
+      max-width: 380px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    /* VIDEO WRAP */
+    /* ── VIDEO WRAP ── */
     #video-wrap {
-      position:relative;
-      width:100%;
-      aspect-ratio:1;
-      background:#020617;
-      border-radius:20px;
-      overflow:hidden;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      box-shadow:0 8px 32px rgba(0,0,0,0.5);
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      background: #020617;
+      border-radius: 18px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     #qr-video {
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:none;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
     }
 
     #placeholder {
-      text-align:center;
-      color:rgba(255,255,255,0.35);
-      font-size:13px;
+      text-align: center;
+      color: rgba(255,255,255,0.35);
+      font-size: 13px;
     }
+    #placeholder .icon { font-size: 48px; display: block; margin-bottom: 10px; }
 
-    #placeholder .icon { font-size:52px; display:block; margin-bottom:10px; }
-
-    /* CORNERS */
+    /* ── CORNER MARKERS ── */
     .corner {
-      position:absolute;
-      width:32px;
-      height:32px;
-      border-color:#f59e0b;
-      border-style:solid;
-      pointer-events:none;
-      z-index:10;
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-color: #f59e0b;
+      border-style: solid;
+      pointer-events: none;
+      z-index: 10;
     }
-    .corner.tl { top:12px; left:12px; border-width:3px 0 0 3px; border-radius:5px 0 0 0; }
-    .corner.tr { top:12px; right:12px; border-width:3px 3px 0 0; border-radius:0 5px 0 0; }
-    .corner.bl { bottom:12px; left:12px; border-width:0 0 3px 3px; border-radius:0 0 0 5px; }
-    .corner.br { bottom:12px; right:12px; border-width:0 3px 3px 0; border-radius:0 0 5px 0; }
+    .corner.tl { top: 12px;    left: 12px;  border-width: 3px 0 0 3px; border-radius: 5px 0 0 0; }
+    .corner.tr { top: 12px;    right: 12px; border-width: 3px 3px 0 0; border-radius: 0 5px 0 0; }
+    .corner.bl { bottom: 12px; left: 12px;  border-width: 0 0 3px 3px; border-radius: 0 0 0 5px; }
+    .corner.br { bottom: 12px; right: 12px; border-width: 0 3px 3px 0; border-radius: 0 0 5px 0; }
 
-    /* SCAN LINE */
+    /* ── SCAN LINE ── */
     #scanline {
-      display:none;
-      position:absolute;
-      left:12px; right:12px;
-      height:2px;
-      background:linear-gradient(90deg, transparent, #f59e0b, transparent);
-      border-radius:2px;
-      animation:sweep 2s ease-in-out infinite;
-      z-index:10;
+      display: none;
+      position: absolute;
+      left: 12px; right: 12px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #f59e0b, transparent);
+      border-radius: 2px;
+      animation: sweep 2s ease-in-out infinite;
+      z-index: 10;
     }
-    @keyframes sweep { 0%,100%{ top:14%; } 50%{ top:82%; } }
+    @keyframes sweep { 0%, 100% { top: 14%; } 50% { top: 82%; } }
 
-    canvas { display:none; }
+    canvas { display: none; }
 
-    /* STATUS */
+    /* ── STATUS ── */
     #status {
-      margin-top:14px;
-      font-size:14px;
-      color:#94a3b8;
-      text-align:center;
-      min-height:20px;
-      line-height:1.5;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #94a3b8;
+      text-align: center;
+      min-height: 20px;
+      line-height: 1.5;
     }
 
-    /* RESULT */
+    /* ── RESULT BADGE ── */
     #result-badge {
-      display:none;
-      margin-top:12px;
-      background:#dcfce7;
-      color:#15803d;
-      border-radius:14px;
-      padding:12px 20px;
-      font-size:15px;
-      font-weight:700;
-      text-align:center;
-      width:100%;
-      animation:popIn 0.25s ease;
+      display: none;
+      margin-top: 10px;
+      background: #dcfce7;
+      color: #15803d;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      width: 100%;
+      animation: popIn 0.25s ease;
     }
-    @keyframes popIn { from{transform:scale(0.85);opacity:0} to{transform:scale(1);opacity:1} }
+    @keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
-    /* BUTTONS */
+    /* ── BUTTONS ── */
     .btn {
-      margin-top:12px;
-      width:100%;
-      padding:14px;
-      border:none;
-      border-radius:14px;
-      font-family:'Sarabun',Arial,sans-serif;
-      font-size:15px;
-      font-weight:700;
-      cursor:pointer;
-      transition:transform 0.15s, opacity 0.15s;
+      margin-top: 10px;
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Sarabun', Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s;
     }
-    .btn:active { transform:scale(0.97); }
+    .btn:active { transform: scale(0.97); }
 
     .btn-primary {
-      background:linear-gradient(135deg,#2563eb,#1d4ed8);
-      color:#fff;
-      box-shadow:0 4px 14px rgba(37,99,235,0.4);
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(37,99,235,0.4);
     }
-
     .btn-secondary {
-      background:#1e293b;
-      color:#94a3b8;
+      background: #1e293b;
+      color: #94a3b8;
     }
 
-    /* ERROR GUIDE */
+    /* ── ERROR GUIDE ── */
     #error-guide {
-      display:none;
-      margin-top:14px;
-      background:#1e293b;
-      border:1.5px solid #f59e0b;
-      border-radius:16px;
-      padding:14px 16px;
-      width:100%;
-      font-size:13px;
-      color:#fde68a;
-      line-height:2;
+      display: none;
+      margin-top: 12px;
+      background: #1e293b;
+      border: 1.5px solid #f59e0b;
+      border-radius: 14px;
+      padding: 14px 16px;
+      width: 100%;
+      font-size: 12px;
+      color: #fde68a;
+      line-height: 2;
     }
     #error-guide .title {
-      font-size:14px;
-      font-weight:700;
-      color:#f59e0b;
-      margin-bottom:8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #f59e0b;
+      margin-bottom: 6px;
     }
   </style>
 </head>
@@ -191,7 +188,6 @@
   <div id="status">กดปุ่มเปิดกล้องแล้วชี้ไปที่ QR Code</div>
   <div id="result-badge"></div>
 
-  <!-- Error guide -->
   <div id="error-guide">
     <div class="title">🔒 Chrome บล็อกกล้อง — วิธีแก้:</div>
     <div>① กดไอคอน 🔒 ที่แถบ URL ด้านบน</div>
@@ -206,14 +202,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
-  var stream = null;
+  var stream    = null;
   var animFrame = null;
-  var found = false;
-
-  // --- รับ origin ของ opener เพื่อใช้ postMessage ---
-  // Google Apps Script มี origin แบบ https://script.google.com
-  // แต่อาจ embed ใน iframe จึงส่ง * ไปก่อน แล้วกรองฝั่ง GAS เอง
-  var TARGET_ORIGIN = "*";
+  var found     = false;
 
   function setStatus(msg) {
     document.getElementById("status").textContent = msg;
@@ -242,7 +233,8 @@
     }).catch(function(e) {
       document.getElementById("btn-start").disabled = false;
       if (e.name === "NotAllowedError" || e.name === "PermissionDeniedError") {
-        document.getElementById("placeholder").innerHTML = '<span class="icon">🚫</span>ถูกบล็อกการใช้กล้อง';
+        document.getElementById("placeholder").innerHTML =
+          '<span class="icon">🚫</span>ถูกบล็อกการใช้กล้อง';
         document.getElementById("error-guide").style.display = "block";
         setStatus("");
       } else if (e.name === "NotFoundError") {
@@ -267,7 +259,8 @@
         canvas.height = vid.videoHeight;
         ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
         var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        var code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "dontInvert" });
+        var code = jsQR(imgData.data, imgData.width, imgData.height,
+                        { inversionAttempts: "dontInvert" });
         if (code && code.data) {
           found = true;
           onFound(code.data);
@@ -280,25 +273,21 @@
   }
 
   function onFound(raw) {
-    // ดึง field แรก (ทะเบียนเครื่อง) กรณี QR มีหลาย field คั่นด้วย | , : tab newline
     var machineNo = raw.split(/[|,:\t\n]/)[0].trim();
 
-    // หยุดกล้อง
     stopCamera();
     document.getElementById("scanline").style.display = "none";
-
-    // แสดงผล
     setStatus("✅ พบ QR Code!");
+
     var badge = document.getElementById("result-badge");
-    badge.textContent = "🔩 ทะเบียนเครื่อง: " + machineNo;
+    badge.textContent  = "🔩 ทะเบียนเครื่อง: " + machineNo;
     badge.style.display = "block";
 
-    // ส่งค่ากลับหน้าแม่ (GAS) ผ่าน postMessage
+    // ส่งกลับหน้าแม่
     if (window.opener && !window.opener.closed) {
-      window.opener.postMessage({ machineNo: machineNo }, TARGET_ORIGIN);
+      window.opener.postMessage({ machineNo: machineNo }, "*");
     }
 
-    // ปิดหน้าต่างนี้หลัง 1.2 วินาที
     setTimeout(function() { window.close(); }, 1200);
   }
 
