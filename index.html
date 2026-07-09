@@ -70,6 +70,7 @@
       top: 0; left: 0;
       width: 100%; height: 100%;
       border-radius: 16px;
+      display: none; /* ใช้แค่เป็น buffer ประมวลผล ไม่ต้องโชว์ */
     }
 
     /* QR frame */
@@ -204,12 +205,13 @@
 </div>
 
 <script>
-  var mode       = 'photo'; // 'photo' | 'qr'
-  var stream     = null;
-  var qrInterval = null;
-  var ready      = false;
-  var lastQRTime = 0;
-  var qrCooldown = 500; // Prevent duplicate detection within 500ms
+  var mode        = 'photo'; // 'photo' | 'qr'
+  var stream      = null;
+  var qrTimer     = null;
+  var ready       = false;
+  var scanning    = false;   // กันไม่ให้สแกนซ้อนกันระหว่างรอผล
+  var QR_INTERVAL = 150;     // ms ระหว่างแต่ละรอบสแกน (throttle)
+  var SCAN_SIZE   = 300;     // ขนาด canvas ที่ใช้สแกน (ยิ่งเล็กยิ่งเร็ว)
 
   // ตรวจสอบว่าเปิดจาก PM Form หรือเปล่า
   var fromOpener = !!window.opener;
@@ -220,13 +222,20 @@
     switchMode('qr');
   }
 
+  // เตรียม canvas สำหรับสแกน (ขนาดคงที่ ไม่โตตามวิดีโอ)
+  var overlay = document.getElementById('overlay');
+  overlay.width  = SCAN_SIZE;
+  overlay.height = SCAN_SIZE;
+  var overlayCtx = overlay.getContext('2d', { willReadFrequently: true });
+
   // เริ่มกล้องทันที
   startCamera();
 
   function startCamera() {
     setStatus('กำลังเปิดกล้อง...', '');
     navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      // ลดความละเอียดที่ขอ เพื่อให้ประมวลผลเร็วขึ้นมาก (640x480 พอสำหรับสแกน QR)
+      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
       audio: false
     })
     .then(function(s) {
@@ -294,59 +303,46 @@
     setTimeout(function() { window.close(); }, 700);
   }
 
-  // ===== สแกน QR (ปรับปรุง) =====
+  // ===== สแกน QR (throttled + crop-on-draw เพื่อความเร็ว) =====
   function startQRScan() {
     stopQRScan();
-    lastQRTime = 0;
-    
-    function scanLoop() {
-      var now = Date.now();
-      
-      // ลองสแกนทุก frame แต่ส่งข้อมูลได้ครั้งละครั้ง (cooldown)
+    qrTimer = setInterval(function () {
+      if (scanning) return; // ยังประมวลผลรอบก่อนหน้าไม่เสร็จ ข้ามรอบนี้ไปก่อน
+      scanning = true;
+
       var result = scanFrame();
-      if (result && (now - lastQRTime) > qrCooldown) {
-        lastQRTime = now;
+      if (result) {
         stopQRScan();
         sendQR(result);
-        return;
       }
-      
-      qrInterval = requestAnimationFrame(scanLoop);
-    }
-    
-    qrInterval = requestAnimationFrame(scanLoop);
+      scanning = false;
+    }, QR_INTERVAL);
   }
 
   function stopQRScan() {
-    if (qrInterval) {
-      cancelAnimationFrame(qrInterval);
-      qrInterval = null;
+    if (qrTimer) {
+      clearInterval(qrTimer);
+      qrTimer = null;
     }
   }
 
   function scanFrame() {
     var v = document.getElementById('video');
     if (!v.videoWidth) return null;
-    var c = document.getElementById('overlay');
-    c.width  = v.videoWidth;
-    c.height = v.videoHeight;
-    var ctx = c.getContext('2d');
-    ctx.drawImage(v, 0, 0);
-    
-    // ประมวลผลเฉพาะ QR frame region (ช่วงกลาง 60% ของภาพ)
-    var centerX = c.width / 2;
-    var centerY = c.height / 2;
-    var scanSize = Math.min(c.width, c.height) * 0.6;
-    var x = Math.max(0, centerX - scanSize / 2);
-    var y = Math.max(0, centerY - scanSize / 2);
-    
-    var imageData = ctx.getImageData(x, y, scanSize, scanSize);
-    
-    // ลองทั้ง normal และ invert เพื่อแม่นยำมากขึ้น
-    var code = jsQR(imageData.data, scanSize, scanSize, {
-      inversionAttempts: 'attemptBoth'
+
+    // ตัดเฉพาะพื้นที่กรอบสแกนตรงกลาง (60% ของด้านที่สั้นกว่า) แล้ววาดลง canvas เล็กทันที
+    // วิธีนี้เร็วกว่าเดิมมาก เพราะไม่ต้องวาดเฟรมเต็มความละเอียดก่อนค่อยตัด
+    var srcSize = Math.min(v.videoWidth, v.videoHeight) * 0.6;
+    var sx = (v.videoWidth  - srcSize) / 2;
+    var sy = (v.videoHeight - srcSize) / 2;
+
+    overlayCtx.drawImage(v, sx, sy, srcSize, srcSize, 0, 0, SCAN_SIZE, SCAN_SIZE);
+
+    var imageData = overlayCtx.getImageData(0, 0, SCAN_SIZE, SCAN_SIZE);
+    var code = jsQR(imageData.data, SCAN_SIZE, SCAN_SIZE, {
+      inversionAttempts: 'dontInvert' // เร็วกว่า attemptBoth ~2 เท่า ใช้พอสำหรับ QR ทั่วไปที่ไม่กลับสี
     });
-    
+
     return code ? code.data : null;
   }
 
