@@ -208,6 +208,8 @@
   var stream     = null;
   var qrInterval = null;
   var ready      = false;
+  var lastQRTime = 0;
+  var qrCooldown = 500; // Prevent duplicate detection within 500ms
 
   // ตรวจสอบว่าเปิดจาก PM Form หรือเปล่า
   var fromOpener = !!window.opener;
@@ -292,20 +294,34 @@
     setTimeout(function() { window.close(); }, 700);
   }
 
-  // ===== สแกน QR =====
+  // ===== สแกน QR (ปรับปรุง) =====
   function startQRScan() {
     stopQRScan();
-    qrInterval = setInterval(function() {
+    lastQRTime = 0;
+    
+    function scanLoop() {
+      var now = Date.now();
+      
+      // ลองสแกนทุก frame แต่ส่งข้อมูลได้ครั้งละครั้ง (cooldown)
       var result = scanFrame();
-      if (result) {
+      if (result && (now - lastQRTime) > qrCooldown) {
+        lastQRTime = now;
         stopQRScan();
         sendQR(result);
+        return;
       }
-    }, 300);
+      
+      qrInterval = requestAnimationFrame(scanLoop);
+    }
+    
+    qrInterval = requestAnimationFrame(scanLoop);
   }
 
   function stopQRScan() {
-    if (qrInterval) { clearInterval(qrInterval); qrInterval = null; }
+    if (qrInterval) {
+      cancelAnimationFrame(qrInterval);
+      qrInterval = null;
+    }
   }
 
   function scanFrame() {
@@ -316,10 +332,21 @@
     c.height = v.videoHeight;
     var ctx = c.getContext('2d');
     ctx.drawImage(v, 0, 0);
-    var imageData = ctx.getImageData(0, 0, c.width, c.height);
-    var code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'dontInvert'
+    
+    // ประมวลผลเฉพาะ QR frame region (ช่วงกลาง 60% ของภาพ)
+    var centerX = c.width / 2;
+    var centerY = c.height / 2;
+    var scanSize = Math.min(c.width, c.height) * 0.6;
+    var x = Math.max(0, centerX - scanSize / 2);
+    var y = Math.max(0, centerY - scanSize / 2);
+    
+    var imageData = ctx.getImageData(x, y, scanSize, scanSize);
+    
+    // ลองทั้ง normal และ invert เพื่อแม่นยำมากขึ้น
+    var code = jsQR(imageData.data, scanSize, scanSize, {
+      inversionAttempts: 'attemptBoth'
     });
+    
     return code ? code.data : null;
   }
 
